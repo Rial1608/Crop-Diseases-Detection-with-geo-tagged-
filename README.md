@@ -46,22 +46,24 @@ This system helps farmers, researchers, and agricultural experts detect plant di
 
 ## 📂 Project Structure
 
-- Crop-Disease-Detection/
--│
--├──  backend/
--│ ├── model/
-│ │ ├── model.keras
-│ │ └── class_indices.json
-│ ├── main.py
-│ └── utils/
+<pre>
+Crop-Disease-Detection/
+│
+├── backend/
+│   ├── model/
+│   │   ├── model.keras
+│   │   └── class_indices.json
+│   ├── main.py
+│   └── utils/
 │
 ├── frontend/
-│ ├── index.html
-│ ├── styles.css
-│ └── scripts.js
+│   ├── index.html
+│   ├── styles.css
+│   └── scripts.js
 │
 ├── README.md
 └── requirements.txt
+</pre>
 
 
 ---
