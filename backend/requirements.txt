@@ -1,0 +1,25 @@
+# Core API framework
+fastapi==0.104.1
+uvicorn==0.24.0
+python-multipart==0.0.6
+
+# ML / Image processing (required - no demo fallback)
+tensorflow>=2.16.0
+pillow>=11.0.0
+numpy>=1.26.0
+
+# HTTP & config
+requests==2.31.0
+python-dotenv==1.0.0
+
+# API models
+pydantic==2.3.0
+pydantic-settings==2.0.3
+
+# Image analysis extras (Grad-CAM, heatmap)
+opencv-python>=4.10.0
+scikit-image>=0.24.0
+scipy>=1.14.0
+
+# PDF generation for reports
+reportlab>=4.0.0
