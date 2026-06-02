@@ -1,68 +1,158 @@
-# 🚀 Fake Duty Leave Verification System
+# 🌾 Smart Crop Disease Detection System (Geo-Tagged)
 
-An intelligent system designed to verify and manage duty leave requests using modern web technologies and secure validation mechanisms.
+## 📌 Overview
+The **Smart Crop Disease Detection System** is an AI-powered web application designed to identify crop diseases using image classification and provide location-based insights using geo-tagging.
 
----
-
-## 📌 Features
-
-- Duty Leave Request Verification  
-- Secure Authentication System  
-- Google Maps Integration (Location-based validation)  
-- Admin Dashboard for Monitoring  
-- Document Upload & Validation  
-- Fast and Responsive UI  
+This system helps farmers, researchers, and agricultural experts detect plant diseases early and take preventive actions, improving crop yield and reducing losses.
 
 ---
 
-## 🛠️ Tech Stack
+## 🚀 Features
 
-- Frontend: React.js  
-- Backend: Node.js / Express.js  
-- Database: MongoDB  
-- APIs: Google Maps API  
-- Other Tools: JWT Authentication, REST APIs  
+- 🌿 Crop Disease Detection using Deep Learning (CNN / TensorFlow)
+- 📸 Image Upload & Analysis
+- 📍 Geo-Tagging Integration
+  - Detects user location
+  - Associates disease reports with geographical data
+- 🌦️ Weather Data Integration
+- 📊 Detailed Disease Report
+  - Disease name
+  - Confidence score
+  - Recommended actions
+- 🌙 Dark Mode UI
+- 📄 Downloadable PDF Reports
+
+---
+
+## 🧠 Technologies Used
+
+### Frontend:
+- HTML, CSS, JavaScript
+- Tailwind CSS
+
+### Backend:
+- Python
+- FastAPI
+
+### Machine Learning:
+- TensorFlow / Keras
+- CNN (Convolutional Neural Network)
+
+### Other Integrations:
+- Geo-location API
+- Weather API
+
+---
+
+## 📂 Project Structure
+
+- Crop-Disease-Detection/
+│
+├── backend/
+│ ├── model/
+│ │ ├── model.keras
+│ │ └── class_indices.json
+│ ├── main.py
+│ └── utils/
+│
+├── frontend/
+│ ├── index.html
+│ ├── styles.css
+│ └── scripts.js
+│
+├── README.md
+└── requirements.txt
+
 
 ---
 
 ## ⚙️ Installation & Setup
 
-### 1. Clone the repository
-git clone https://github.com/YOUR_USERNAME/fake-dutyleave-verification-sys.git  
-cd fake-dutyleave-verification-sys  
-
-### 2. Install dependencies
+### 1. Clone the Repository
 ```
-npm install  
+git clone https://github.com/your-username/crop-disease-detection.git
+cd crop-disease-detection
 ```
-### 3. Setup environment variables
-Create a `.env` file and add:
 
-MONGODB_URI=your_mongodb_uri  
-GOOGLE_MAPS_API_KEY=your_api_key  
-SESSION_SECRET=your_secret  
+### 2. Install Dependencies
+```
+pip install -r requirements.txt
+```
+### 3. Run Backend Server
+```
+uvicorn main:app --reload
+```
 
-### 4. Run the project
-npm run dev  
+### 4. Open in Browser
+```
+http://localhost:8000
+```
 
 ---
 
-## 🚫 License & Usage
+## 🧪 Model Details
 
-⚠️ This project is NOT free to use.
+- Model Type: CNN (Convolutional Neural Network)
+- Framework: TensorFlow / Keras
+- Input: Leaf Image
+- Output: Disease Class + Confidence Score
 
-- All rights are reserved by the author  
-- Unauthorized use, distribution, or modification is strictly prohibited  
-- Permission is required for any kind of usage  
+---
+
+## 📍 Geo-Tagging Functionality
+
+- Captures user's real-time location
+- Associates disease detection with coordinates
+- Helps in:
+  - Disease tracking by region
+  - Smart agriculture analysis
+
+---
+
+## 📸 How It Works
+
+1. Upload crop image  
+2. System processes image using trained model  
+3. Detects disease  
+4. Fetches location & weather data  
+5. Displays results with recommendations  
+
+---
+
+## ⚠️ Important Notice
+
+🚫 **This project is NOT free to use.**
+
+All rights are strictly reserved by the owner.
+
+- Unauthorized copying, distribution, or commercial use is prohibited  
+- Permission is required before using this project in any form  
+
+---
+
+## 📜 License
+
+**All Rights Reserved © 2026**
+
+This project and its codebase are proprietary.
 
 ---
 
 ## 👨‍💻 Author
 
-Developed by Rial1608  
+Developed by: **Ritik Sharma**
+
+---
+
+## 💡 Future Enhancements
+
+- Mobile App Integration  
+- Real-time disease mapping  
+- Multi-language support  
+- More crop datasets  
 
 ---
 
 ## ⭐ Support
 
-If you found this project helpful, consider giving it a star on GitHub!
+If you like this project, consider giving it a ⭐ on GitHub!
