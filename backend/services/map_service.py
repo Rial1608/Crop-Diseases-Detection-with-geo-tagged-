@@ -10,8 +10,30 @@ class MapService:
     
     def __init__(self):
         self.zones = GEOGRAPHIC_ZONES
-        self.default_center = {"lat": 28.6139, "lng": 77.2090}
+        # Use first dynamic prediction location as center if available
+        self.default_center = self._get_center()
         self.default_zoom = 10
+
+    def _get_dynamic_zones(self):
+        """Fetch zones created from actual image uploads."""
+        try:
+            from services.prediction_store import get_map_zones_from_predictions
+            return get_map_zones_from_predictions()
+        except Exception as e:
+            print(f"[WARN] Could not load prediction zones: {e}")
+            return []
+
+    def _get_center(self) -> dict:
+        """Centre on the most recent upload location if available."""
+        try:
+            from services.prediction_store import get_all_predictions
+            preds = get_all_predictions()
+            if preds:
+                newest = preds[0]  # newest first
+                return {"lat": newest["latitude"], "lng": newest["longitude"]}
+        except Exception:
+            pass
+        return {"lat": 28.6139, "lng": 77.2090}  # fallback: New Delhi
     
     def get_map_config(self) -> Dict:
         """Get map configuration."""
@@ -27,34 +49,43 @@ class MapService:
         }
     
     def get_zones_data(self, user_lat: Optional[float] = None, user_lng: Optional[float] = None) -> Dict:
-        """Get all zones with enhanced data."""
+        """Get all zones (dynamic from uploads + static fallback)."""
+        # ── 1. Dynamic zones from real predictions ────────────────────────────
+        dynamic_zones = self._get_dynamic_zones()
+
+        # ── 2. Only show static demo zones when no uploads exist ──────────────
+        source_zones = dynamic_zones if dynamic_zones else self.zones
+
         zones_data = []
-        
-        for zone in self.zones:
+        for zone in source_zones:
             zone_info = {
-                "id": zone["name"].replace(" ", "_").lower(),
-                "name": zone["name"],
-                "latitude": zone["lat"],
-                "longitude": zone["lng"],
-                "radius_km": zone["radius"],
-                "risk_level": zone["risk"],
-                "color": RISK_LEVELS.get(zone["risk"], {}).get("color", "#999"),
+                "id":            zone.get("name", "").replace(" ", "_").lower(),
+                "name":          zone.get("name", "Unknown Zone"),
+                "latitude":      zone["lat"],
+                "longitude":     zone["lng"],
+                "radius_km":     zone.get("radius", 2),
+                "risk_level":    zone.get("risk", "LOW"),
+                "color":         RISK_LEVELS.get(zone.get("risk", "LOW"), {}).get("color", "#22c55e"),
                 "affected_crops": self._get_affected_crops_for_zone(zone),
-                "description": self._get_zone_description(zone),
+                "description":   self._get_zone_description(zone),
+                "source":        zone.get("source", "static"),
+                # extra fields only on upload-based zones
+                "detections":    zone.get("detections", []),
+                "detection_count": zone.get("count", 0),
             }
-            
-            # Add distance if user location provided
+
             if user_lat is not None and user_lng is not None:
                 distance = haversine_distance(user_lat, user_lng, zone["lat"], zone["lng"])
                 zone_info["distance_km"] = round(distance, 2)
-                zone_info["user_in_zone"] = distance <= zone["radius"]
-            
+                zone_info["user_in_zone"] = distance <= zone.get("radius", 2)
+
             zones_data.append(zone_info)
-        
+
         return {
-            "zones": zones_data,
+            "zones":       zones_data,
             "total_zones": len(zones_data),
-            "statistics": self._get_zone_statistics(),
+            "statistics":  self._get_zone_statistics(zones_data),
+            "has_real_data": len(dynamic_zones) > 0,
         }
     
     def get_user_zone_status(self, latitude: float, longitude: float) -> Dict:
@@ -185,16 +216,18 @@ class MapService:
         
         return descriptions.get(zone["risk"], "Unknown risk zone")
     
-    def _get_zone_statistics(self) -> Dict:
+    def _get_zone_statistics(self, zones_data=None) -> Dict:
         """Get statistics about zones."""
-        total_zones = len(self.zones)
-        high_risk = sum(1 for z in self.zones if z["risk"] == "HIGH")
-        medium_risk = sum(1 for z in self.zones if z["risk"] == "MEDIUM")
-        low_risk = sum(1 for z in self.zones if z["risk"] == "LOW")
+        if zones_data is None:
+            zones_data = self.zones
+        total_zones  = len(zones_data)
+        high_risk    = sum(1 for z in zones_data if z.get("risk_level", z.get("risk")) == "HIGH")
+        medium_risk  = sum(1 for z in zones_data if z.get("risk_level", z.get("risk")) == "MEDIUM")
+        low_risk     = sum(1 for z in zones_data if z.get("risk_level", z.get("risk")) == "LOW")
         
         return {
-            "total": total_zones,
-            "high_risk": high_risk,
+            "total":       total_zones,
+            "high_risk":   high_risk,
             "medium_risk": medium_risk,
-            "low_risk": low_risk,
+            "low_risk":    low_risk,
         }

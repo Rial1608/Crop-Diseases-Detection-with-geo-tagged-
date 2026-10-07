@@ -3,32 +3,41 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>SmartCrop — Plant Disease Detection</title>
-  <meta name="description" content="AI-powered crop disease detection. Analyze plant images in seconds, get risk assessments and treatment recommendations." />
+  <title>CropSense — AI Crop Disease Intelligence</title>
+  <meta name="description" content="AI-powered crop disease detection with 3D visualization. Analyze plant images in seconds, get geo-tagged risk assessments and treatment recommendations." />
+  <meta name="keywords" content="crop disease detection, AI agriculture, plant pathology, SmartCrop, disease diagnosis" />
 
-  <!-- Font preconnects -->
+  <!-- Preconnect -->
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <!-- Inter (body) + Poppins (headings) -->
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;450;500;600;700&family=Poppins:wght@600;700;800&display=swap" rel="stylesheet" />
+
+  <!-- Premium Fonts -->
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Space+Grotesk:wght@300;400;500;600;700&family=DM+Mono:ital,wght@0,300;0,400;0,500;1,300&display=swap" rel="stylesheet" />
 
   <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
 
   <style>
     *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
-    body { font-family: 'Inter', system-ui, sans-serif; background: #f9fafb; }
+    html { scroll-behavior: smooth; }
+    body {
+      font-family: 'Space Grotesk', system-ui, sans-serif;
+      background: #030303;
+      color: #f0f0f0;
+      overflow-x: hidden;
+    }
+    /* Prevent FOUC */
+    #root { min-height: 100vh; }
   </style>
 
-  
   <script>
     (function () {
       try {
-        var saved = localStorage.getItem('smartcrop-theme');
-        var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-        var isDark = saved === 'dark' || (!saved && prefersDark);
-        if (isDark) {
-          document.documentElement.classList.add('dark');
+        var saved = localStorage.getItem('cropsense-theme');
+        var isDark = saved !== 'light';
+        if (!isDark) {
+          document.documentElement.setAttribute('data-theme', 'light');
+        } else {
           document.documentElement.setAttribute('data-theme', 'dark');
         }
       } catch (e) {}

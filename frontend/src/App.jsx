@@ -21,6 +21,9 @@ function App() {
     <ErrorBoundary>
       <AppProvider>
         <Router>
+          {/* Subtle grain texture overlay */}
+          <div className="noise-overlay" aria-hidden="true" />
+
           <div className="App">
             <Navbar />
             <Suspense fallback={<SuspenseFallback />}>

@@ -1,40 +1,40 @@
 import React from 'react';
 
-function SuspenseFallback() {
+export default function SuspenseFallback() {
   return (
-    <div
-      style={{
-        minHeight: '100vh',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: '#ffffff',
-        fontFamily: "'Inter', system-ui, sans-serif",
-      }}
-    >
-      <div style={{ textAlign: 'center' }}>
-        {/* Spinner */}
-        <div
-          style={{
-            width: 36,
-            height: 36,
-            border: '2.5px solid #e5e7eb',
-            borderTopColor: '#16a34a',
-            borderRadius: '50%',
-            animation: 'spin 0.7s linear infinite',
-            margin: '0 auto 16px',
-          }}
-        />
-        <p style={{ fontSize: 14, color: '#6b7280', fontWeight: 500 }}>
-          Loading SmartCrop…
-        </p>
+    <div style={{
+      minHeight: '100vh',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      background: 'var(--bg-base, #030303)',
+      flexDirection: 'column',
+      gap: '1.5rem',
+    }}>
+      {/* Logo */}
+      <div style={{
+        fontFamily: "'Syne', sans-serif",
+        fontWeight: 800,
+        fontSize: '1.5rem',
+        letterSpacing: '-0.04em',
+        color: '#fff',
+      }}>
+        CropSense<span style={{ color: '#c8ff00' }}>.</span>
+      </div>
+
+      {/* Loading bar */}
+      <div style={{ width: 200, height: 2, background: '#1a1a1a', borderRadius: 100, overflow: 'hidden' }}>
+        <div style={{
+          height: '100%',
+          background: '#c8ff00',
+          borderRadius: 100,
+          animation: 'suspense-load 1.5s cubic-bezier(0.16, 1, 0.3, 1) forwards',
+        }} />
       </div>
 
       <style>{`
-        @keyframes spin { to { transform: rotate(360deg); } }
+        @keyframes suspense-load { from { width: 0% } to { width: 100% } }
       `}</style>
     </div>
   );
 }
-
-export default SuspenseFallback;

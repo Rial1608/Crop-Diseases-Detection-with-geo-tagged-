@@ -119,6 +119,11 @@ app.include_router(weather.router)
 app.include_router(risk.router)
 app.include_router(map_routes.router)
 
+# ── Serve uploaded images as static files ─────────────────────────────────────
+_uploads_dir = backend_dir / "uploads"
+_uploads_dir.mkdir(exist_ok=True)
+app.mount("/uploads", StaticFiles(directory=str(_uploads_dir)), name="uploads")
+
 # Optional: Report route (requires reportlab)
 report_available = False
 try:

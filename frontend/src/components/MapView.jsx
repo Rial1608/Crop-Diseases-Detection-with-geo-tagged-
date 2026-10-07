@@ -76,11 +76,12 @@ function MapView({ zones = [], userLocation = null, center = null, zoom = null }
       style={{ height: '100%', width: '100%' }}
       scrollWheelZoom
     >
-      {/* OSM tile layer */}
+      {/* Free OSM tile layer with dark CSS filter */}
       <TileLayer
         url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
         maxZoom={19}
+        className="map-tiles-dark"
       />
 
       {/* User location marker */}

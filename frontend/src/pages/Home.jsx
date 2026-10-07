@@ -1,378 +1,476 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useApp } from '../context/AppContext';
-import WeatherCard from '../components/WeatherCard';
+import gsap from 'gsap';
+import { useGSAP } from '@gsap/react';
+import ScrollTrigger from 'gsap/ScrollTrigger';
 
-/* ── Icons ──────────────────────────────────────────────── */
-const IcoScan = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/>
-    <path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/>
-    <rect x="7" y="7" width="10" height="10" rx="1"/>
-  </svg>
-);
-const IcoCloud = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/>
-  </svg>
-);
-const IcoChart = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/>
-    <line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/>
-  </svg>
-);
-const IcoMap = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-    <polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/>
-    <line x1="9" y1="3" x2="9" y2="18"/><line x1="15" y1="6" x2="15" y2="21"/>
-  </svg>
-);
-const IcoArrow = () => (
-  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
-  </svg>
-);
-const IcoCheck = () => (
-  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-    <polyline points="20 6 9 17 4 12"/>
-  </svg>
-);
-const IcoLeaf = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10z"/>
-    <path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/>
-  </svg>
-);
-const IcoShield = () => (
-  <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-  </svg>
-);
+gsap.registerPlugin(ScrollTrigger);
 
-/* ── Feature data ─────────────────────────────────────────── */
-const FEATURES = [
-  {
-    icon: <IcoScan />, pill: 'icon-pill icon-pill-green',
-    title: 'Disease Detection',
-    desc: 'Upload any plant photo. Our AI identifies 16 diseases across major crops with 92% accuracy in under 2 seconds.',
-  },
-  {
-    icon: <IcoCloud />, pill: 'icon-pill icon-pill-blue',
-    title: 'Weather Monitoring',
-    desc: 'Real-time weather data integrated with disease risk scoring — humidity, wind, and temperature all factor in.',
-  },
-  {
-    icon: <IcoChart />, pill: 'icon-pill icon-pill-amber',
-    title: 'Risk Analysis',
-    desc: 'Detailed risk scores and spread probability help you prioritize which crops need immediate attention.',
-  },
-];
 
-const STATS = [
-  { val: '16+',   lbl: 'Diseases Detected' },
-  { val: '92%',   lbl: 'AI Accuracy'       },
-  { val: '<2s',   lbl: 'Analysis Speed'    },
-  { val: '100%',  lbl: 'Free to Use'       },
-];
+/* ── 3D TILT FEATURE CARD ───────────────────────────────────── */
+function FeatureCard({ icon, title, desc, accentClass, delay = 0 }) {
+  const cardRef = useRef(null);
 
-/* ── Component ───────────────────────────────────────────── */
-export default function Home() {
-  const { lastPrediction, analysisHistory, weatherRisk } = useApp();
-  const [imgLoaded, setImgLoaded] = useState(false);
+  const handleMouseMove = (e) => {
+    const card = cardRef.current;
+    if (!card) return;
+    const rect = card.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const y = e.clientY - rect.top;
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+    const rotateX = ((y - centerY) / centerY) * -8;
+    const rotateY = ((x - centerX) / centerX) * 8;
+    card.style.transform = `perspective(1000px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateZ(10px)`;
+    card.style.setProperty('--mouse-x', `${x}px`);
+    card.style.setProperty('--mouse-y', `${y}px`);
+  };
 
-  useEffect(() => { document.title = 'SmartCrop — Plant Disease Detection'; }, []);
-
-  const latestAnalysis = analysisHistory[0] || null;
+  const handleMouseLeave = () => {
+    const card = cardRef.current;
+    if (!card) return;
+    card.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg) translateZ(0px)';
+  };
 
   return (
-    <div style={{ background: '#f8fafc' }}>
+    <div
+      ref={cardRef}
+      className="feature-card anim-fade-up"
+      style={{ transitionDelay: `${delay}ms` }}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
+    >
+      <div className={`feature-icon ${accentClass}`}>{icon}</div>
+      <h3 className="feature-title">{title}</h3>
+      <p className="feature-desc">{desc}</p>
+    </div>
+  );
+}
 
-      {/* ════════════════════════════════════════════════════
-          HERO — full-bleed background image + overlay
-          ════════════════════════════════════════════════════ */}
-      <section
-        style={{
-          position:           'relative',
-          minHeight:          '100vh',
-          display:            'flex',
-          flexDirection:      'column',
-          alignItems:         'center',
-          justifyContent:     'center',
-          overflow:           'hidden',
-          backgroundImage:    imgLoaded ? "url('/hero-farm.png')" : 'none',
-          backgroundSize:     'cover',
-          backgroundPosition: 'center 40%',
-          backgroundRepeat:   'no-repeat',
-          backgroundColor:    '#e8f5e9',   /* fallback while image loads */
-        }}
-      >
-        {/* Pre-load trigger */}
-        <img
-          src="/hero-farm.png"
-          alt=""
-          onLoad={() => setImgLoaded(true)}
-          style={{ display: 'none' }}
-        />
+/* ── MARQUEE STATS ──────────────────────────────────────────── */
+function StatsMarquee() {
+  const stats = [
+    { num: '92%', label: 'Detection Accuracy' },
+    { num: '16', label: 'Pathogen Classes' },
+    { num: '<2s', label: 'Response Time' },
+    { num: '50K+', label: 'Scans Completed' },
+    { num: '98%', label: 'Uptime SLA' },
+    { num: '12', label: 'Crop Varieties' },
+  ];
+  const doubled = [...stats, ...stats]; // for seamless loop
 
-        {/* ── Gradient overlay ──────────────────────────── */}
-        <div style={{
-          position:   'absolute',
-          inset:       0,
-          background: 'linear-gradient(160deg, rgba(255,255,255,0.88) 0%, rgba(240,253,244,0.82) 40%, rgba(209,250,229,0.70) 100%)',
-          backdropFilter: 'blur(0.5px)',
-        }} />
-
-        {/* ── Hero content ──────────────────────────────── */}
-        <div className="wrap-sm anim-up" style={{
-          position:  'relative',
-          zIndex:     2,
-          textAlign: 'center',
-          paddingTop:    '7rem',
-          paddingBottom: '6rem',
-        }}>
-
-          {/* Badge */}
-          <div style={{
-            display:        'inline-flex',
-            alignItems:     'center',
-            gap:            '0.5rem',
-            marginBottom:   '1.75rem',
-            padding:        '0.375rem 1rem',
-            borderRadius:   '9999px',
-            background:     'rgba(255,255,255,0.85)',
-            border:         '1px solid #bbf7d0',
-            boxShadow:      '0 2px 12px rgba(22,163,74,0.10)',
-            backdropFilter: 'blur(6px)',
-          }}>
-            <span style={{ color: '#16a34a', fontSize: 9 }}>●</span>
-            <span style={{ fontSize: '.8125rem', fontWeight: 600, color: '#15803d' }}>
-              AI-Powered Agriculture Platform
-            </span>
+  return (
+    <div className="marquee-wrap">
+      <div className="marquee-track">
+        {doubled.map((s, i) => (
+          <div key={i} className="marquee-item">
+            <span className="marquee-num">{s.num}</span>
+            <span className="marquee-label">{s.label}</span>
+            {i < doubled.length - 1 && <span className="marquee-divider">·</span>}
           </div>
+        ))}
+      </div>
+    </div>
+  );
+}
 
-          {/* Headline */}
-          <h1 style={{
-            fontSize:      'clamp(2.25rem, 5vw, 3.75rem)',
-            fontWeight:    800,
-            color:         '#0f1f0f',
-            letterSpacing: '-.03em',
-            lineHeight:    1.1,
-            marginBottom:  '1.25rem',
-            textShadow:    '0 1px 3px rgba(255,255,255,0.6)',
+/* ── SCROLL PROCESS STEP ────────────────────────────────────── */
+function ProcessStep({ number, title, desc, delay }) {
+  return (
+    <div className="anim-fade-up" style={{ transitionDelay: `${delay}ms` }}>
+      <div style={{
+        display: 'flex',
+        alignItems: 'flex-start',
+        gap: '2rem',
+        padding: '2rem 0',
+        borderTop: '1px solid var(--border)',
+        position: 'relative'
+      }}>
+        <span style={{
+          fontFamily: 'var(--font-mono)',
+          fontSize: '0.75rem',
+          color: 'var(--lime)',
+          letterSpacing: '0.1em',
+          padding: '0.3rem 0.75rem',
+          border: '1px solid rgba(200,255,0,0.3)',
+          borderRadius: '100px',
+          flexShrink: 0,
+          marginTop: '0.25rem'
+        }}>{number}</span>
+        <div>
+          <h3 style={{ fontSize: '1.5rem', fontWeight: 700, marginBottom: '0.6rem', letterSpacing: '-0.02em' }}>{title}</h3>
+          <p style={{ color: 'var(--text-2)', lineHeight: 1.65, fontSize: '1rem' }}>{desc}</p>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ── MAIN COMPONENT ─────────────────────────────────────────── */
+export default function Home() {
+  const { analysisHistory, weatherRisk } = useApp();
+  const pageRef = useRef(null);
+  const heroRef = useRef(null);
+  const featuresRef = useRef(null);
+  const processRef = useRef(null);
+
+  useEffect(() => { document.title = 'Agro Radar — AI Crop Disease Intelligence'; }, []);
+
+  /* Intersection observer for fade-up animations */
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => entries.forEach(e => {
+        if (e.isIntersecting) e.target.classList.add('visible');
+      }),
+      { threshold: 0.12, rootMargin: '0px 0px -60px 0px' }
+    );
+    document.querySelectorAll('.anim-fade-up').forEach(el => observer.observe(el));
+    return () => observer.disconnect();
+  }, []);
+
+
+
+  /* GSAP scroll animations */
+  useGSAP(() => {
+    // Hero title split animation
+    gsap.from('.hero-title-word', {
+      y: 100,
+      opacity: 0,
+      duration: 1.2,
+      stagger: 0.1,
+      ease: 'power4.out',
+      delay: 0.2,
+    });
+
+    gsap.from('.hero-badge, .hero-subtitle, .hero-actions', {
+      y: 40,
+      opacity: 0,
+      duration: 1,
+      stagger: 0.12,
+      ease: 'power3.out',
+      delay: 0.6,
+    });
+
+    // Scroll-triggered section titles
+    gsap.utils.toArray('.section-title').forEach(el => {
+      gsap.from(el, {
+        scrollTrigger: { trigger: el, start: 'top 85%' },
+        y: 60,
+        opacity: 0,
+        duration: 1,
+        ease: 'power4.out',
+      });
+    });
+
+    // Parallax hero content
+    gsap.to('.hero-content', {
+      scrollTrigger: {
+        trigger: heroRef.current,
+        start: 'top top',
+        end: 'bottom top',
+        scrub: true,
+      },
+      y: 100,
+      opacity: 0,
+    });
+
+    // Feature cards stagger
+    gsap.from('.feature-card', {
+      scrollTrigger: { trigger: featuresRef.current, start: 'top 80%' },
+      y: 80,
+      opacity: 0,
+      duration: 0.9,
+      stagger: 0.08,
+      ease: 'power3.out',
+    });
+
+    // Process steps
+    gsap.from('.process-step', {
+      scrollTrigger: { trigger: processRef.current, start: 'top 80%' },
+      x: -60,
+      opacity: 0,
+      duration: 0.8,
+      stagger: 0.12,
+      ease: 'power3.out',
+    });
+  }, { scope: pageRef });
+
+  const FEATURES = [
+    {
+      icon: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/><path d="M11 8v6m-3-3h6"/>
+        </svg>
+      ),
+      title: 'Neural Diagnostics',
+      desc: 'Our deep CNN model, trained on 87,000+ annotated specimens, identifies 16 pathogen classes with clinical-grade precision.',
+      accentClass: 'feature-icon-lime',
+    },
+    {
+      icon: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/>
+        </svg>
+      ),
+      title: 'Geo-Tagged Intelligence',
+      desc: 'Every scan is geo-referenced. Get hyper-local disease outbreak maps and regional risk forecasts based on your exact coordinates.',
+      accentClass: 'feature-icon-cyan',
+    },
+    {
+      icon: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+        </svg>
+      ),
+      title: 'Real-Time Risk Assessment',
+      desc: 'Weather data fusion with disease models computes dynamic risk scores that adapt in real-time to temperature and humidity shifts.',
+      accentClass: 'feature-icon-magenta',
+    },
+    {
+      icon: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M9 12l2 2 4-4"/><path d="M21 12c.552 0 1-.448 1-1V8a1 1 0 0 0-1-1h-4L14 3H7L5 7H1a1 1 0 0 0-1 1v3c0 .552.448 1 1 1v7a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2z"/>
+        </svg>
+      ),
+      title: 'Treatment Protocols',
+      desc: 'Receive scientifically-backed treatment plans, fungicide recommendations, and organic alternatives tailored to your diagnosis.',
+      accentClass: 'feature-icon-amber',
+    },
+    {
+      icon: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+          <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+        </svg>
+      ),
+      title: 'Historical Analytics',
+      desc: 'Track disease patterns over time. Our analytics dashboard reveals seasonal trends and helps build preventive spray schedules.',
+      accentClass: 'feature-icon-cyan',
+    },
+    {
+      icon: (
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+        </svg>
+      ),
+      title: 'Secure & Private',
+      desc: 'Your farm data stays yours. End-to-end encryption, no third-party sharing, and full GDPR compliance built from the ground up.',
+      accentClass: 'feature-icon-lime',
+    },
+  ];
+
+  const PROCESS_STEPS = [
+    { number: '01', title: 'Capture the Leaf', desc: 'Photograph the affected leaf in natural light. Our system works with phone cameras, DSLR, or drone imagery — minimum 1 megapixel.' },
+    { number: '02', title: 'Upload & Geolocate', desc: 'Upload your image. We automatically detect your GPS coordinates and cross-reference local weather and outbreak data.' },
+    { number: '03', title: 'AI Inference', desc: 'Our convolutional neural network runs inference in under 2 seconds, producing confidence scores across 16 disease categories.' },
+    { number: '04', title: 'Receive Report', desc: 'Get a detailed PDF report with diagnosis, risk map, treatment plan, and preventive measures — ready to share with your agronomist.' },
+  ];
+
+  return (
+    <div ref={pageRef} className="page" style={{ background: 'var(--bg-base)', overflow: 'hidden', paddingTop: 0 }}>
+
+      {/* ── REFERENCE-STYLE HERO ── */}
+      <section ref={heroRef} className="hero" style={{ 
+        height: '100vh', 
+        width: '100%', 
+        position: 'relative', 
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundImage: 'url(/bg2.png)',
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        overflow: 'hidden'
+      }}>
+        {/* Subtle dark overlay for text readability */}
+        <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.25)', zIndex: 1, pointerEvents: 'none' }} />
+
+        {/* Subtle top gradient for navbar readability */}
+        <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '20vh', background: 'linear-gradient(to bottom, rgba(0,0,0,0.6) 0%, transparent 100%)', pointerEvents: 'none', zIndex: 1 }} />
+        
+        {/* Bottom vignette gradient for depth */}
+        <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, height: '40vh', background: 'linear-gradient(to top, var(--bg-base) 0%, transparent 100%)', pointerEvents: 'none', zIndex: 1 }} />
+
+        <div className="hero-content" style={{ zIndex: 2, textAlign: 'center', maxWidth: 900, padding: '0 2rem' }}>
+          <h1 className="hero-title" style={{ 
+            fontFamily: 'var(--font-display)', 
+            fontWeight: 900, 
+            color: '#ffffff', 
+            lineHeight: 0.95,
+            margin: 0,
+            letterSpacing: '-0.02em',
+            textShadow: '0 15px 30px rgba(0,0,0,0.6), 0 5px 10px rgba(0,0,0,0.4)',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center'
           }}>
-            Detect. Diagnose.<br />
-            <span style={{
-              color:      '#16a34a',
-              background: 'linear-gradient(135deg, #15803d 0%, #16a34a 60%, #4ade80 100%)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent',
-            }}>
-              Protect your harvest.
-            </span>
+            <span className="hero-title-word" style={{ fontSize: 'clamp(2rem, 5vw, 4rem)' }}>AGRO</span>
+            <span className="hero-title-word" style={{ fontSize: 'clamp(3.5rem, 10vw, 8rem)' }}>RADAR</span>
           </h1>
 
-          {/* Sub-headline */}
-          <p style={{
-            fontSize:     '1.0625rem',
-            color:        '#374151',
-            maxWidth:     '26rem',
-            margin:       '0 auto 2.25rem',
-            lineHeight:   1.65,
-            fontWeight:   400,
+          <p className="hero-subtitle" style={{ 
+            fontSize: '1.05rem',
+            lineHeight: 1.6,
+            textShadow: '0 2px 4px rgba(0,0,0,0.8)', 
+            color: '#ffffff', 
+            fontWeight: 500, 
+            margin: '1.5rem auto 3rem',
+            maxWidth: '560px'
           }}>
-            AI-powered plant disease detection with real-time weather risk assessment.
-            Identify crop diseases in seconds and receive actionable treatment plans.
+            As an agricultural intelligence platform, we're on a mission to make it simple for everyone to protect their harvest by scanning each plant!
           </p>
 
-          {/* CTAs */}
-          <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', marginBottom: '2.5rem', flexWrap: 'wrap' }}>
-            <Link to="/upload" className="btn btn-primary btn-lg"
-              style={{ boxShadow: '0 4px 20px rgba(22,163,74,0.30)', minWidth: 148 }}>
-              Upload Image
-            </Link>
-            <Link to="/dashboard" className="btn btn-secondary btn-lg"
-              style={{ background: 'rgba(255,255,255,0.85)', backdropFilter: 'blur(6px)', minWidth: 148 }}>
-              View Dashboard
+          <div className="hero-actions" style={{ justifyContent: 'center' }}>
+            <Link to="/upload" className="btn-primary" style={{ 
+              boxShadow: '0 10px 30px rgba(0,0,0,0.4)',
+              textTransform: 'uppercase',
+              letterSpacing: '0.05em'
+            }}>
+              START A SCAN NOW
             </Link>
           </div>
-
-          {/* Trust badges */}
-          <div style={{ display: 'flex', justifyContent: 'center', gap: '1.25rem', flexWrap: 'wrap', color: '#6b7280', fontSize: '.8125rem' }}>
-            {['16 Diseases Covered', '92% Accuracy', 'Real-time Weather', 'Free to Use'].map(t => (
-              <span key={t} style={{ display: 'flex', alignItems: 'center', gap: '0.375rem' }}>
-                <span style={{ width: 18, height: 18, borderRadius: '50%', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', background: '#dcfce7', color: '#15803d', flexShrink: 0 }}>
-                  <IcoCheck />
-                </span>
-                {t}
-              </span>
-            ))}
-          </div>
         </div>
-
-        {/* ── Stat bar ──────────────────────────────────── */}
-        <div style={{
-          position:       'absolute',
-          bottom:          0,
-          left:            0,
-          right:           0,
-          zIndex:          2,
-          display:        'flex',
-          justifyContent: 'center',
-          padding:        '0 1.5rem 0',
-        }}>
-          <div style={{
-            display:         'flex',
-            gap:              0,
-            background:      'rgba(255,255,255,0.92)',
-            backdropFilter:  'blur(12px)',
-            borderRadius:    '1.25rem 1.25rem 0 0',
-            boxShadow:       '0 -2px 24px rgba(0,0,0,0.06)',
-            border:          '1px solid rgba(255,255,255,0.8)',
-            borderBottom:    'none',
-            overflow:        'hidden',
-          }}>
-            {STATS.map(({ val, lbl }, i) => (
-              <div key={lbl} style={{
-                padding:     '1rem 2.25rem',
-                textAlign:   'center',
-                borderRight: i < STATS.length - 1 ? '1px solid #f3f4f6' : 'none',
-              }}>
-                <p style={{ fontSize: '1.5rem', fontWeight: 800, color: '#15803d', lineHeight: 1, marginBottom: '0.25rem', letterSpacing: '-.02em' }}>{val}</p>
-                <p style={{ fontSize: '.75rem', color: '#9ca3af', fontWeight: 500 }}>{lbl}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* ── Scroll indicator ──────────────────────────── */}
-        <div style={{
-          position:  'absolute',
-          bottom:    '6.5rem',
-          left:      '50%',
-          transform: 'translateX(-50%)',
-          zIndex:     3,
-          animation: 'bounce 2s ease-in-out infinite',
-        }}>
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#16a34a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.6 }}>
-            <polyline points="6 9 12 15 18 9"/>
-          </svg>
+        
+        <div className="hero-scroll-hint" style={{ zIndex: 20 }}>
+          <div className="scroll-line" />
+          <span>Scroll to explore</span>
         </div>
       </section>
 
-      {/* ════════════════════════════════════════════════════
-          LATEST ANALYSIS BANNER
-          ════════════════════════════════════════════════════ */}
-      {latestAnalysis && (
-        <div className="wrap-lg" style={{ paddingTop: '2rem' }}>
-          <div className="anim-up" style={{
-            display:        'flex',
-            alignItems:     'center',
-            justifyContent: 'space-between',
-            padding:        '0.875rem 1.25rem',
-            borderRadius:   '1rem',
-            background:     '#f0fdf4',
-            border:         '1px solid #bbf7d0',
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-              <div style={{
-                width: 34, height: 34, borderRadius: 8,
-                display: 'flex', alignItems: 'center', justifyContent: 'center',
-                background: latestAnalysis.isHealthy ? '#dcfce7' : '#fee2e2',
-                color:      latestAnalysis.isHealthy ? '#15803d' : '#b91c1c',
-              }}>
-                <IcoLeaf />
-              </div>
-              <div>
-                <p style={{ fontSize: '.875rem', fontWeight: 600, color: '#111827', marginBottom: 1 }}>
-                  Latest: {latestAnalysis.diseaseName}
-                </p>
-                <p style={{ fontSize: '.75rem', color: '#6b7280' }}>
-                  Confidence {latestAnalysis.confidence}% · {latestAnalysis.isHealthy ? 'Healthy' : latestAnalysis.riskLevel + ' risk'}
-                </p>
-              </div>
-            </div>
-            <Link to="/results" className="btn btn-ghost btn-sm" style={{ color: '#15803d' }}>
-              View Report <IcoArrow />
-            </Link>
-          </div>
-        </div>
-      )}
+      {/* ── STATS MARQUEE ── */}
+      <StatsMarquee />
 
-      {/* ════════════════════════════════════════════════════
-          FEATURES
-          ════════════════════════════════════════════════════ */}
-      <section className="wrap-lg" style={{ paddingTop: '5rem', paddingBottom: '3rem' }}>
-        <p className="eyebrow text-center" style={{ marginBottom: '0.5rem' }}>Why SmartCrop</p>
-        <h2 style={{ textAlign: 'center', fontSize: '1.5rem', fontWeight: 700, color: '#111827', letterSpacing: '-.02em', marginBottom: '2.5rem' }}>
-          Everything you need to protect your crops
+      {/* ── FEATURES ── */}
+      <section className="scroll-section" ref={featuresRef}>
+        <div className="section-label">Capabilities</div>
+        <h2 className="section-title">
+          Everything you need to<br/>
+          <span style={{ color: 'var(--lime)' }}>protect your harvest.</span>
         </h2>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5 stagger">
-          {FEATURES.map(({ icon, pill, title, desc }) => (
-            <div key={title} className="card anim-up" style={{
-              borderTop: '3px solid transparent',
-              backgroundImage: 'linear-gradient(white, white), linear-gradient(135deg, #16a34a20, #3b82f620)',
-              backgroundOrigin: 'border-box',
-              backgroundClip: 'padding-box, border-box',
-            }}>
-              <div className={pill} style={{ marginBottom: '1rem' }}>{icon}</div>
-              <h3 style={{ fontSize: '1rem', fontWeight: 600, color: '#111827', marginBottom: '0.5rem' }}>{title}</h3>
-              <p style={{ fontSize: '.875rem', color: '#6b7280', lineHeight: 1.6 }}>{desc}</p>
-            </div>
+        <div className="features-grid">
+          {FEATURES.map((f, i) => (
+            <FeatureCard key={i} {...f} delay={i * 50} />
           ))}
         </div>
       </section>
 
-      {/* ════════════════════════════════════════════════════
-          LIVE WEATHER
-          ════════════════════════════════════════════════════ */}
-      <section className="wrap-lg anim-up" style={{ paddingBottom: '3rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.625rem', marginBottom: '0.875rem' }}>
-          <p className="eyebrow">Live Weather</p>
-          <span className={`badge ${weatherRisk.badge}`} style={{ fontSize: '.7rem' }}>
-            {weatherRisk.level} Disease Risk
-          </span>
+      {/* ── HOW IT WORKS ── */}
+      <section className="scroll-section" ref={processRef} style={{ borderTop: 'none', paddingTop: '3rem', position: 'relative', overflow: 'hidden' }}>
+        {/* Agriculture-themed decorative SVG background */}
+        <svg style={{ position: 'absolute', right: '0', top: '50%', transform: 'translateY(-50%)', opacity: 0.06, width: '45%', pointerEvents: 'none', zIndex: 0 }} viewBox="0 0 400 400" fill="none" xmlns="http://www.w3.org/2000/svg">
+          {/* Wheat stalk 1 */}
+          <line x1="80" y1="380" x2="80" y2="100" stroke="#39ff14" strokeWidth="3"/>
+          <ellipse cx="80" cy="90" rx="12" ry="22" fill="#39ff14" transform="rotate(-20 80 90)"/>
+          <ellipse cx="60" cy="140" rx="10" ry="18" fill="#39ff14" transform="rotate(-40 60 140)"/>
+          <ellipse cx="100" cy="140" rx="10" ry="18" fill="#39ff14" transform="rotate(40 100 140)"/>
+          <ellipse cx="68" cy="190" rx="9" ry="16" fill="#39ff14" transform="rotate(-30 68 190)"/>
+          <ellipse cx="92" cy="190" rx="9" ry="16" fill="#39ff14" transform="rotate(30 92 190)"/>
+          {/* Wheat stalk 2 */}
+          <line x1="200" y1="380" x2="200" y2="80" stroke="#39ff14" strokeWidth="3"/>
+          <ellipse cx="200" cy="68" rx="12" ry="24" fill="#39ff14"/>
+          <ellipse cx="178" cy="120" rx="10" ry="18" fill="#39ff14" transform="rotate(-35 178 120)"/>
+          <ellipse cx="222" cy="120" rx="10" ry="18" fill="#39ff14" transform="rotate(35 222 120)"/>
+          <ellipse cx="185" cy="170" rx="9" ry="16" fill="#39ff14" transform="rotate(-25 185 170)"/>
+          <ellipse cx="215" cy="170" rx="9" ry="16" fill="#39ff14" transform="rotate(25 215 170)"/>
+          {/* Wheat stalk 3 */}
+          <line x1="320" y1="380" x2="320" y2="110" stroke="#39ff14" strokeWidth="3"/>
+          <ellipse cx="320" cy="100" rx="12" ry="22" fill="#39ff14" transform="rotate(15 320 100)"/>
+          <ellipse cx="300" cy="150" rx="10" ry="18" fill="#39ff14" transform="rotate(-30 300 150)"/>
+          <ellipse cx="340" cy="150" rx="10" ry="18" fill="#39ff14" transform="rotate(45 340 150)"/>
+          <ellipse cx="308" cy="200" rx="9" ry="16" fill="#39ff14" transform="rotate(-20 308 200)"/>
+          <ellipse cx="332" cy="200" rx="9" ry="16" fill="#39ff14" transform="rotate(30 332 200)"/>
+          {/* Leaf shapes */}
+          <path d="M150 280 Q180 220 230 250 Q200 310 150 280Z" fill="#39ff14"/>
+          <line x1="150" y1="280" x2="210" y2="248" stroke="#000" strokeWidth="1.5" opacity="0.3"/>
+          <path d="M270 320 Q250 260 310 270 Q300 330 270 320Z" fill="#39ff14"/>
+          {/* DNA/scan circles */}
+          <circle cx="50" cy="320" r="20" stroke="#39ff14" strokeWidth="2" strokeDasharray="4 3"/>
+          <circle cx="50" cy="320" r="8" fill="#39ff14" opacity="0.4"/>
+          <circle cx="360" cy="280" r="15" stroke="#39ff14" strokeWidth="2" strokeDasharray="3 3"/>
+          <circle cx="360" cy="280" r="6" fill="#39ff14" opacity="0.4"/>
+        </svg>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.2fr', gap: '3rem', alignItems: 'center', position: 'relative', zIndex: 1 }}>
+
+          <div>
+            <div className="section-label">Process</div>
+            <h2 className="section-title">
+              From field<br/>to insight,<br/>
+              <span style={{ color: 'var(--lime)' }}>in seconds.</span>
+            </h2>
+            <p style={{ color: 'var(--text-2)', marginTop: '1.5rem', lineHeight: 1.7, maxWidth: '400px' }}>
+              CropSense combines computer vision, geospatial data, and agronomy research into a seamless diagnostic pipeline accessible from any device.
+            </p>
+
+            <div style={{ marginTop: '2rem' }}>
+              <Link to="/upload" className="btn-primary" style={{ boxShadow: '0 0 20px rgba(57,255,20,0.3)' }}>
+                Try It Now
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                  <line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/>
+                </svg>
+              </Link>
+            </div>
+          </div>
+
+          <div ref={processRef}>
+            {PROCESS_STEPS.map((step, i) => (
+              <ProcessStep key={i} {...step} delay={i * 100} />
+            ))}
+          </div>
         </div>
-        <WeatherCard compact showRisk={false} />
       </section>
 
-      {/* ════════════════════════════════════════════════════
-          ACTION CARDS
-          ════════════════════════════════════════════════════ */}
-      <section className="wrap-lg" style={{ paddingBottom: '5rem' }}>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          <Link to="/upload" className="card-link" style={{ background: '#f0fdf4', borderColor: '#bbf7d0' }}>
-            <div className="icon-pill icon-pill-green" style={{ marginBottom: '1rem' }}><IcoScan /></div>
-            <h3 style={{ fontSize: '1rem', fontWeight: 600, color: '#111827', marginBottom: '0.5rem' }}>Analyze Crops</h3>
-            <p style={{ fontSize: '.875rem', color: '#6b7280', lineHeight: 1.6, marginBottom: '1rem' }}>
-              Upload plant images for AI-powered disease identification with confidence scores and risk breakdown.
-            </p>
-            <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', fontSize: '.875rem', fontWeight: 600, color: '#15803d' }}>
-              Start Analysis <IcoArrow />
-            </span>
-          </Link>
-
-          <Link to="/map" className="card-link" style={{ background: '#eff6ff', borderColor: '#bfdbfe' }}>
-            <div className="icon-pill icon-pill-blue" style={{ marginBottom: '1rem' }}><IcoMap /></div>
-            <h3 style={{ fontSize: '1rem', fontWeight: 600, color: '#111827', marginBottom: '0.5rem' }}>View Risk Map</h3>
-            <p style={{ fontSize: '.875rem', color: '#6b7280', lineHeight: 1.6, marginBottom: '1rem' }}>
-              Monitor live disease hotspots and outbreak trends across your region on an interactive map.
-            </p>
-            <span style={{ display: 'flex', alignItems: 'center', gap: '0.375rem', fontSize: '.875rem', fontWeight: 600, color: '#1d4ed8' }}>
-              Open Map <IcoArrow />
-            </span>
-          </Link>
+      {/* ── CTA STRIP ── */}
+      <section style={{ padding: '4rem 2rem', textAlign: 'center', position: 'relative' }}>
+        <div style={{
+          position: 'absolute',
+          inset: 0,
+          background: 'radial-gradient(ellipse 70% 60% at 50% 50%, rgba(200,255,0,0.06) 0%, transparent 70%)',
+          pointerEvents: 'none',
+        }} />
+        <div className="anim-fade-up" style={{ position: 'relative', zIndex: 1 }}>
+          <div className="section-label" style={{ justifyContent: 'center', marginBottom: '1.5rem' }}>Get Started</div>
+          <h2 style={{ fontFamily: 'var(--font-display)', fontSize: 'clamp(2.5rem, 6vw, 5rem)', fontWeight: 800, letterSpacing: '-0.04em', marginBottom: '1.5rem' }}>
+            Your crops deserve<br/>
+            <span style={{ color: 'var(--lime)' }}>better protection.</span>
+          </h2>
+          <p style={{ color: 'var(--text-2)', fontSize: '1.1rem', marginBottom: '3rem', maxWidth: '480px', margin: '0 auto 3rem' }}>
+            Join thousands of farmers using AI-powered diagnostics to prevent crop loss before it happens.
+          </p>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+            <Link to="/upload" className="btn-primary">Start Scanning — Free</Link>
+            <Link to="/map" className="btn-secondary">View Live Map</Link>
+          </div>
         </div>
       </section>
 
-      {/* Bounce animation keyframe */}
-      <style>{`
-        @keyframes bounce {
-          0%, 100% { transform: translateX(-50%) translateY(0);    }
-          50%       { transform: translateX(-50%) translateY(6px);  }
-        }
-      `}</style>
+      {/* ── FOOTER ── */}
+      <footer style={{
+        borderTop: '1px solid var(--border)',
+        padding: '2.5rem 3rem',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        flexWrap: 'wrap',
+        gap: '1rem',
+      }}>
+        <div style={{ fontFamily: 'var(--font-display)', fontWeight: 800, fontSize: '1.2rem', letterSpacing: '-0.04em' }}>
+          CropSense
+          <span style={{ color: 'var(--lime)' }}>.</span>
+        </div>
+        <div style={{ fontFamily: 'var(--font-mono)', fontSize: '0.75rem', color: 'var(--text-3)', letterSpacing: '0.05em' }}>
+          © 2026 CropSense AI · Agricultural Intelligence Platform
+        </div>
+        <div style={{ display: 'flex', gap: '1.5rem' }}>
+          {['Privacy', 'Terms', 'API Docs'].map(l => (
+            <a key={l} href="#" style={{ fontSize: '0.85rem', color: 'var(--text-2)', transition: 'color 0.2s' }}
+              onMouseEnter={e => e.target.style.color = 'var(--lime)'}
+              onMouseLeave={e => e.target.style.color = 'var(--text-2)'}>{l}</a>
+          ))}
+        </div>
+      </footer>
     </div>
   );
 }

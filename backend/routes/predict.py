@@ -6,8 +6,42 @@ from typing import Optional
 import io
 import numpy as np
 from PIL import Image
+from PIL.ExifTags import TAGS, GPSTAGS
 
 router = APIRouter(prefix="/api", tags=["Prediction"])
+
+
+# ── Helper: extract GPS from EXIF ─────────────────────────────────────────────
+def _extract_exif_gps(img: Image.Image):
+    """
+    Attempt to read GPS lat/lng from the image EXIF data.
+    Returns (latitude, longitude) floats or (None, None) if unavailable.
+    """
+    try:
+        exif_data = img._getexif()  # type: ignore[attr-defined]
+        if not exif_data:
+            return None, None
+
+        # Resolve tag names
+        tagged = {TAGS.get(k, k): v for k, v in exif_data.items()}
+        gps_info_raw = tagged.get("GPSInfo")
+        if not gps_info_raw:
+            return None, None
+
+        gps = {GPSTAGS.get(k, k): v for k, v in gps_info_raw.items()}
+
+        def _to_decimal(vals, ref):
+            d, m, s = [float(x) for x in vals]
+            decimal = d + m / 60 + s / 3600
+            if ref in ("S", "W"):
+                decimal = -decimal
+            return decimal
+
+        lat = _to_decimal(gps["GPSLatitude"],  gps.get("GPSLatitudeRef",  "N"))
+        lng = _to_decimal(gps["GPSLongitude"], gps.get("GPSLongitudeRef", "E"))
+        return lat, lng
+    except Exception:
+        return None, None
 
 
 # ── Helper: preprocess exactly like training ──────────────────────────────────
@@ -61,7 +95,30 @@ async def predict_disease(
             print(f"[ERROR] Invalid image: {e}")
             raise HTTPException(status_code=400, detail=f"Invalid or corrupt image file: {e}")
 
-        # ── 2. Preprocess ────────────────────────────────────────────────────
+        # ── 2. Heuristic Non-Leaf Rejection (Color Check) ────────────────────
+        # Even if the ML model is highly confident, we reject images that have no green in them.
+        try:
+            hsv_img = img.convert("HSV")
+            h, s, v = hsv_img.split()
+            import numpy as np
+            h_arr, s_arr, v_arr = np.array(h), np.array(s), np.array(v)
+            # Green hue in PIL (0-255) is roughly 40 to 100. Saturation and Value must be > 40.
+            green_mask = (h_arr >= 35) & (h_arr <= 105) & (s_arr >= 40) & (v_arr >= 40)
+            green_ratio = np.sum(green_mask) / green_mask.size
+            print(f"[CHECK] Image green ratio: {green_ratio:.2%}")
+            
+            # If less than 1% of the image is green, it's highly unlikely to be a crop leaf
+            if green_ratio < 0.01:
+                raise HTTPException(
+                    status_code=400,
+                    detail="This image does not appear to contain a plant leaf. Please upload a clear photo of a leaf."
+                )
+        except HTTPException:
+            raise
+        except Exception as e:
+            print(f"[WARN] Color check failed: {e}")
+
+        # ── 3. Preprocess ────────────────────────────────────────────────────
         from utils.constants import IMAGE_SIZE, MODEL_CONFIDENCE_THRESHOLD
         image_array = _preprocess_image(img, target_size=IMAGE_SIZE)
         print(f"[OK] Preprocessed: shape={image_array.shape}, dtype={image_array.dtype}, "
@@ -83,18 +140,34 @@ async def predict_disease(
         prediction = result["prediction"]
         print(f"[OK] Prediction: {prediction['disease_name']} ({prediction['confidence']:.2f}%)")
 
-        # ── 4. Confidence threshold warning ──────────────────────────────────
+        # ── 4. Out-of-Distribution / Non-Leaf Check ──────────────────────────
+        # If the model is extremely uncertain (e.g. < 45% confidence for a 16-class model),
+        # it is highly likely the user uploaded a random non-leaf image.
+        if prediction["confidence"] < 45.0:
+            raise HTTPException(
+                status_code=400, 
+                detail="This doesn't look like a valid crop leaf. Please upload a clear, close-up image of a plant leaf."
+            )
+
         if prediction.get("is_uncertain"):
             result["warning"] = (
                 "Low confidence - the model is not sure about this prediction. "
                 "Please upload a clearer, well-lit image of the affected leaf."
             )
 
-        # ── 5. Weather data ──────────────────────────────────────────────────
-        if latitude is None:
-            latitude = 28.6139
-        if longitude is None:
-            longitude = 77.2090
+        # ── 5. Try EXIF GPS first, fallback to submitted coords, then default ──
+        exif_lat, exif_lng = _extract_exif_gps(img)
+        if exif_lat is not None and exif_lng is not None:
+            latitude  = exif_lat
+            longitude = exif_lng
+            print(f"[GPS] EXIF coordinates extracted: {latitude:.6f}, {longitude:.6f}")
+        else:
+            if latitude is not None and longitude is not None:
+                print(f"[GPS] No EXIF GPS found – using submitted coordinates: {latitude:.6f}, {longitude:.6f}")
+            else:
+                latitude  = latitude  or 28.6139
+                longitude = longitude or 77.2090
+                print("[GPS] No EXIF or submitted coordinates – using default location")
 
         weather_data = None
         try:
@@ -152,6 +225,20 @@ async def predict_disease(
         if "warning" in result:
             response["warning"] = result["warning"]
 
+        # ── 8. Persist image + prediction record ────────────────────────────
+        try:
+            from services.prediction_store import save_prediction as _store
+            _store(
+                image_bytes   = image_bytes,
+                filename      = file.filename or "upload.jpg",
+                latitude      = latitude,
+                longitude     = longitude,
+                prediction    = prediction,
+                risk_analysis = risk_analysis or {},
+            )
+        except Exception as e:
+            print(f"[WARN] Could not save prediction to store: {e}")
+
         return response
 
     except HTTPException:
@@ -181,3 +268,19 @@ async def predict_info():
         "supported_formats": ["jpg", "jpeg", "png", "gif", "bmp"],
         "input_size": [224, 224, 3],
     }
+
+
+# ── GET /api/predictions ──────────────────────────────────────────────────────
+@router.get("/predictions")
+async def list_predictions(limit: int = 50):
+    """Return all stored predictions (newest first)."""
+    try:
+        from services.prediction_store import get_all_predictions
+        all_preds = get_all_predictions()
+        return {
+            "success": True,
+            "total":   len(all_preds),
+            "predictions": all_preds[:limit],
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
