@@ -17,8 +17,8 @@ class WeatherService:
 
     def __init__(self, api_key: Optional[str] = None):
         self.api_key = api_key or os.getenv("OPENWEATHER_API_KEY", "")
-        # Treat placeholder as missing
-        if self.api_key in ("", "your_api_key_here"):
+        # Treat placeholder / unset values as missing
+        if self.api_key in ("", "your_api_key_here", "YOUR_API_KEY"):
             self.api_key = ""
 
     # ── Current weather ───────────────────────────────────────────────────────
